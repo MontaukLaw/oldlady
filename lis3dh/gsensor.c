@@ -8,6 +8,7 @@
 
 extern PWMDuty_t pwmDuty;
 
+
 short pitch = 0;
 short roll = 0;
 
@@ -26,7 +27,6 @@ extern int8_t Acc_Data[];
 /* Private function prototypes -----------------------------------------------*/
 
 static bool GsensorLis3dhInit(void);
-
 
 /* Exported functions --------------------------------------------------------*/
 
@@ -101,6 +101,10 @@ void GetAxisXYZ(void)
   LIS3DH_ReadReg(LIS3DH_OUT_Y_H, &pose.y);
   
   LIS3DH_ReadReg(LIS3DH_OUT_Z_H, &pose.z);  
+  
+  PrintU8('x',pose.x);
+  PrintU8('y',pose.y);
+  PrintU8('z',pose.z);
 }
 
 
@@ -145,6 +149,22 @@ void CountPitch(void)
   oldPitch = pitch;
   oldRoll = roll;
   
+
+  PrintShort('p',pitch);
+  PrintShort('r',roll);
+  PrintShort('s',(roll+pitch));
+  //PrintShort('x',(roll+pitch));
+}
+
+uint16_t GetDutySC7A20(uint8_t color)
+{
+  uint16_t duty = (uint16_t)color * 10;
+  
+  if (duty < 10)
+  {
+    duty = 10;
+  }
+  return duty;  
 }
 
 uint16_t GetDuty(uint8_t color)
@@ -158,12 +178,13 @@ uint16_t GetDuty(uint8_t color)
   {
     duty = color * 20;
   }
-  if (duty < 10)
+  if (duty < 2)
   {
-    duty = 10;
+    duty = 2;
   }
   return duty;
 }
+
 #define MIN_DUTY_GAP 100
 
 void GetDutyOldStyle(void)
@@ -172,9 +193,31 @@ void GetDutyOldStyle(void)
   static uint16_t redDutyNow = 0;
   static uint16_t greenDutyNow = 0;
   
-  __IO uint16_t blueDutyTarget = GetDuty(pose.y);
-  __IO uint16_t redDutyTarget = GetDuty(pose.x);
-  __IO uint16_t greenDutyTarget = GetDuty(pose.z);
+  __IO uint16_t blueDutyTarget;
+  __IO uint16_t redDutyTarget; 
+  __IO uint16_t greenDutyTarget;
+
+#if  MEMS_LIS3DH
+  blueDutyTarget = GetDuty(pose.y);
+  redDutyTarget = GetDuty(pose.x);
+  greenDutyTarget = GetDuty(pose.z);
+
+#endif
+  
+#if MEMS_SC7A20C
+  //blueDutyTarget = GetDuty(pose.y);
+  //blueDutyTarget = GetDutySC7A20(pose.y);
+  //redDutyTarget = GetDuty(pose.x);
+  //greenDutyTarget = GetDuty(pose.z);
+  //blueDutyTarget = 
+  GsensorToRGB();
+  redDutyTarget = pwmDuty.r;
+  
+  blueDutyTarget = pwmDuty.b;
+  
+  greenDutyTarget = pwmDuty.g;
+  
+#endif  
   
   if (blueDutyNow < blueDutyTarget)
   {
@@ -220,6 +263,7 @@ void GetDutyOldStyle(void)
       greenDutyNow -= DUTY_STEP;
     }
   }
+  
   SetBlueDuty(blueDutyNow);
   SetRedDuty(redDutyNow);
   SetGreenDuty(greenDutyNow);
@@ -270,8 +314,6 @@ void GetDutyDirect(void)
   }else if(tempY > 0xC0){    
     pwmDuty.b = ((uint16_t) ( tempY - 0xC0) ) * 20 ;     
   }  
-
-
   
   // z是绿色
   if(tempZ < 0x40){    

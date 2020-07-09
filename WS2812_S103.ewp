@@ -146,7 +146,7 @@
                 </option>
                 <option>
                     <name>IccOptLevel</name>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>IccOptStrategy</name>
@@ -155,12 +155,12 @@
                 </option>
                 <option>
                     <name>IccOptLevelSlave</name>
-                    <state>0</state>
+                    <state>2</state>
                 </option>
                 <option>
                     <name>IccOptAllowList</name>
                     <version>0</version>
-                    <state>000000</state>
+                    <state>100100</state>
                 </option>
                 <option>
                     <name>IccGenerateDebugInfo</name>
@@ -188,7 +188,8 @@
                 </option>
                 <option>
                     <name>CCDefines</name>
-                    <state>STM8S103</state>
+                    <state>STM8S103
+</state>
                 </option>
                 <option>
                     <name>CCPreprocFile</name>
@@ -260,6 +261,7 @@
                     <state>$TOOLKIT_DIR$\inc\c</state>
                     <state>$PROJ_DIR$</state>
                     <state>$PROJ_DIR$\ws2812b</state>
+                    <state>$PROJ_DIR$\lis3dh</state>
                     <state>$PROJ_DIR$\lis3dh</state>
                 </option>
                 <option>
@@ -1631,19 +1633,37 @@
     <group>
         <name>Driver</name>
         <file>
+            <name>$PROJ_DIR$\src\bsp_adc.c</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\lis3dh\bsp_i2c.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\bsp_uart.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\lis3dh\lis3dh_driver.c</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\src\SC7A20.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\stm8s_adc1.c</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\stm8s_clk.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\stm8s_flash.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_gpio.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_i2c.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\stm8s_iwdg.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_tim1.c</name>
@@ -1656,6 +1676,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_uart1.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\ws2812.c</name>
         </file>
     </group>
     <file>

@@ -11,5 +11,7 @@ void GetDutyDirect(void);
 
 void GetDutyOldStyle(void);
 
+uint16_t GetDutySC7A20(uint8_t color);
+
 #endif
 

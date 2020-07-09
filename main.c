@@ -1,13 +1,22 @@
 #include "user_comm.h"
 
-
 Color_t color = {0, 0, 0};
 extern uint32_t counter;
 AxesRaw_t axesBuff = {0, 0, 0};
 extern uint8_t catchTime;
 extern Pose_t pose;
 extern PWMDuty_t pwmDuty;
+uint8_t ifStartCountSleep;
+uint8_t ifSleeping;
+uint8_t runningState = 0;
+extern int8_t Acc_Data[3];
+uint16_t Conversion_Value = 0;
+extern unsigned char LedsArray[];
+extern int8_t AccData8Bit[];
 
+extern signed short int SL_ACCEL_X,SL_ACCEL_Y,SL_ACCEL_Z;
+
+// 定时器配置
 static void TIM4_Config(void)
 {
   /* TIM4 configuration:
@@ -35,6 +44,7 @@ static void TIM4_Config(void)
   TIM4_Cmd(ENABLE);
 }
 
+// led的pwm配置
 static void TIM2Config(void)
 {
   /* Time base configuration */
@@ -42,7 +52,7 @@ static void TIM2Config(void)
 
   // green
   /* PWM1 Mode configuration: Channel1 */
-  TIM2_OC1Init(TIM2_OCMODE_PWM1, TIM2_OUTPUTSTATE_ENABLE,0, TIM2_OCPOLARITY_HIGH);
+  TIM2_OC1Init(TIM2_OCMODE_PWM1, TIM2_OUTPUTSTATE_ENABLE, 0, TIM2_OCPOLARITY_HIGH);
   TIM2_OC1PreloadConfig(ENABLE);
 
   // red
@@ -59,286 +69,55 @@ static void TIM2Config(void)
 
   /* TIM2 enable counter */
   TIM2_Cmd(ENABLE);
-  
 }
 
-static void TIM1_Config(void)
-{
-
-  TIM1_TimeBaseInit(15, TIM1_COUNTERMODE_UP, 1000, 0);
-  
-  TIM1_ARRPreloadConfig(ENABLE);         //使能自动重装
-  
-  TIM1_ITConfig(TIM1_IT_UPDATE, ENABLE); //数据更新中断
-  
-  TIM1_Cmd(ENABLE);                      //开定时器
-
-#if 0  
-  TIM1_DeInit();
-
-  TIM1_TimeBaseInit(2, TIM1_COUNTERMODE_UP, 16, 0);
-  
-  /* Update Interrupt Enable */
-  TIM1_ITConfig(TIM1_IT_UPDATE, ENABLE); 
-  
-  TIM1_ARRPreloadConfig(ENABLE);
-  /* Enable TIM1 */
-  TIM1_Cmd(ENABLE);
-
-  enableInterrupts();
-#endif
-
-#if 0
-  TIM1_DeInit();
-  
-  TIM1->PSCRH = 0x00; // 16M系统时钟经预分频f=fck/(PSCR+1)
-  TIM1->PSCRL = 0x10; // PSCR=0x1F3F，f=16M/16=1000 000Hz，每个计数周期1ms
-  TIM1->ARRH = 0x01; // 自动重载寄存器ARR=0x01F4=500
-  TIM1->ARRL = 0xF4; // 每记数500次产生一次中断，即500ms
-  TIM1->IER = 0x01; // 允许更新中断
-  TIM1->CR1 = 0x01; // 计数器使能，开始计数
-
-#endif
-}
-
-void main_003(void)
-{
-  uint16_t duty = 0;
-  uint8_t dir = 1;
-  uint16_t counter = 0;
-  TIM2Config();
-  //TIM2_SetCompare1(MAX_DUTY);
-
-  while (1)
-  {
-    //duty++;
-
-    if (dir)
-    {
-      counter++;
-      if (counter > MAX_DUTY * 10)
-      {
-        dir = 0;
-      }
-    }
-    else
-    {
-      counter--;
-      if (counter == 0)
-      {
-        dir = 1;
-      }
-    }
-#if 0
-    if(duty>5000){
-      TIM2_SetCompare1(0);
-    }else{
-      TIM2_SetCompare1(MAX_DUTY);
-    }   
-    if(duty > 10000){
-      duty = 0;
-    }
-#endif
-
-    TIM2_SetCompare1(counter / 10);
-  }
-}
-
-void TransGtoColorOld(void)
-{
-  static uint16_t colorRNew = 0;
-  
-  static uint16_t colorGNew = 0;
-  
-  static uint16_t colorBNew = 0;  
-  
-  __IO uint16_t colorTarget = color.g;
-  __IO uint16_t tmp = 0;
-
-  if (colorGNew < colorTarget)
-  {
-    tmp = colorTarget - colorGNew;
-    if (tmp > MIN_GAP)
-    {
-      colorGNew++;
-    }
-  }
-  else
-  {
-    tmp = colorGNew - colorTarget;
-    if (tmp > MIN_GAP)
-    {
-      colorGNew--;
-    }
-  }
-  
-  colorTarget = color.r;
-  if (colorRNew < colorTarget)
-  {
-    tmp = colorTarget - colorRNew;
-    if (tmp > MIN_GAP)
-    {
-      colorRNew++;
-    }
-  }
-  else
-  {
-    tmp = colorRNew - colorTarget;
-    if (tmp > MIN_GAP)
-    {
-      colorRNew--;
-    }
-  }
-  colorTarget = color.b;
-  if (colorBNew < colorTarget)
-  {
-    tmp = colorTarget - colorBNew;
-    if (tmp > MIN_GAP)
-    {
-      colorBNew++;
-    }
-  }
-  else
-  {
-    tmp = colorBNew - colorTarget;
-    if (tmp > MIN_GAP)
-    {
-      colorBNew--;
-    }
-  }  
-  TIM2_SetCompare1(colorGNew);
-  TIM2_SetCompare2(colorRNew);  
-  TIM2_SetCompare3(colorBNew);
-  
-  //((uint16_t) axesBuff.AXIS_X)*10;
-}
-
-void TIM1_init(uint8_t prescalerHigh, uint8_t prescalerLow, long setNum)
-{
-  TIM1->PSCRH = prescalerHigh;
-  TIM1->PSCRL = prescalerLow;  
-  
-  TIM1->IER = 0x01;
-  
-  TIM1->ARRH = (uint8_t)(setNum >> 8);
-  TIM1->ARRL = (uint8_t)(setNum && 0x00FF);
-  
-  TIM1->CNTRH = (uint8_t)(setNum >> 8);
-  TIM1->CNTRL = (uint8_t)(setNum && 0x00FF);  
-
-}
-
-void TransColorNew(void)
-{
-  uint8_t tempX = pose.x;
-  uint8_t tempZ = pose.z;
-  
-  // 将x轴分开, 分别缝上接头
-  if(tempX < 0x6A){    
-    pwmDuty.b = ((uint16_t) tempX ) * 20 + 1250;
-    
-  }else if(tempX > 0x6A){    
-    pwmDuty.b = ((uint16_t)(tempX - 0xBD)) * 20;    
-  }
-  
-  if(tempZ < 0x6A){
-    
-    pwmDuty.b = ((uint16_t) tempZ ) * 20 + 1250;
-    
-    
-  }else if(tempZ > 0x6A){
-    
-    pwmDuty.b = ((uint16_t)(tempZ - 0xBD)) * 20;    
-  }
-
-
-}
-void TransGtoColor(void)
-{
-  static uint16_t colorRNew = 0;
-  
-  // 首先是红色
-  // 红色的值由X轴决定, x轴的G值为4F到00, 其中从35到4F可定为为极值
-  // 负值从C0到FF
-  __IO uint16_t colorTarget = color.r;
-  
-#if 0 
-  if(colorRNew > colorTarget){
-    if((colorRNew - colorTarget) > MIN_GAP)
-    {
-      colorRNew --;
-    }
-    
-  }else{
-    if((colorTarget - colorRNew) > MIN_GAP)
-    {
-      colorRNew ++;
-    }
-  }
-  
-#endif
-  
-  if(colorTarget > MIN_DUTY)
-  {
-    
-    TIM2_SetCompare2(colorTarget);
-    //TIM2_SetCompare2(colorRNew); 
-  }else{
-    TIM2_SetCompare2(MIN_DUTY); 
-  }
-  
-  colorTarget = color.b;
-  
-  if(colorTarget > MIN_DUTY)
-  {
-    
-    TIM2_SetCompare3(colorTarget);
-    //TIM2_SetCompare2(colorRNew); 
-  }else{
-    TIM2_SetCompare3(MIN_DUTY); 
-  }
-  
-  //TIM2_SetCompare2(colorTarget);
-}
-
+// 电源管理
 void PowerManage(void)
 {
   static uint16_t sleepCounter = 0;
-  static uint16_t postOld = 0; 
-  uint16_t poseTotalNow = pose.x + pose.y + pose.z;
+  static int16_t postOld = 0;
+  // SL_ACCEL_X,SL_ACCEL_Y,SL_ACCEL_Z
+  
+  uint16_t poseTotalNow = (int16_t)SL_ACCEL_X + (int16_t)SL_ACCEL_Y + (int16_t)SL_ACCEL_Z;
+  
   //prinfNumber(poseTotalNow);
-   
-  if(abs(postOld - poseTotalNow) < SLEEP_POSE_THRESHOLD){
-    sleepCounter ++;
-    if(sleepCounter > SLEEP_MODE_WAIT_SECONDS){
+
+  if (abs(postOld - poseTotalNow) < SLEEP_POSE_THRESHOLD)
+  {
+    sleepCounter++;
+    
+    if (sleepCounter > SLEEP_MODE_WAIT_SECONDS)
+    {
       //disableInterrupts();
-      LIS3DH_SetMode(LIS3DH_POWER_DOWN);      
-      DelayMs(1);
-      AllOff();
-      DelayMs(1);
-      Debug('o');            
-      halt();      
+
+#if MEMS_LIS3DH      
+      I2C_SDA_HIGH();
+      I2C_SCL_HIGH();
+      LIS3DH_SetMode(LIS3DH_POWER_DOWN);
+      //DelayMs(1);
+#endif
+
+#if RGB_PWM  
+      BlueBlink();
+      //AllOff();
+#endif
+      
+      // 如果长时间不动, 就闪蓝灯,然后关机
+      //WS2812BlueBlink();
+      
+      PowerOff();
+
     }
-  }else{
+  }
+  else
+  {
     sleepCounter = 0;
   }
   postOld = poseTotalNow;
 }
 
-// 测试待机功耗跟状态
-void main_power_comsum_test(void)
+void main_charging_rainbow(void)
 {
-  while(1)
-  {
-  }
-}
-
-void main(void)
-{
-  //uint8_t mid = 0;
-  uint8_t sleepModeCounter = 0;
-  uint8_t uartCounter = 0;
-  
   CLK_HSICmd(ENABLE);
 
   CLK_SYSCLKConfig(CLK_PRESCALER_HSIDIV1);
@@ -346,205 +125,440 @@ void main(void)
   TIM4_Config();
 
   TIM2Config();
-  
-  UART1_DeInit();
 
-  UART1_Init((uint32_t)115200, 
-             UART1_WORDLENGTH_8D, 
-             UART1_STOPBITS_1, 
-             UART1_PARITY_NO,
-             UART1_SYNCMODE_CLOCK_DISABLE, 
-             UART1_MODE_TXRX_ENABLE);
-  
-  UART1_Cmd(ENABLE);
-  
-  //TIM1_Config();
-  //GPIO_Init(GPIOC, GPIO_PIN_4, GPIO_MODE_OUT_PP_HIGH_FAST);
-  //GPIO_Init(GPIOC, GPIO_PIN_5, GPIO_MODE_OUT_PP_HIGH_FAST);
-
-  GPIO_Init(GPIOC, GPIO_PIN_7, GPIO_MODE_OUT_PP_HIGH_FAST);
-  GPIO_WriteHigh(GPIOC, GPIO_PIN_7);
-
-  GPIO_Init(GPIOB, GPIO_PIN_4, GPIO_MODE_OUT_PP_HIGH_FAST);
-  GPIO_Init(GPIOB, GPIO_PIN_5, GPIO_MODE_OUT_PP_HIGH_FAST);
-
-  //GPIO_Init(GPIOD, GPIO_PIN_1, GPIO_MODE_OUT_PP_HIGH_FAST);
-  //GPIO_Init(GPIOD, GPIO_PIN_2, GPIO_MODE_OUT_PP_HIGH_FAST);
-
-  //GPIO_WriteHigh(GPIOD, GPIO_PIN_1);
-  //GPIO_WriteHigh(GPIOD, GPIO_PIN_2);
-
-  GPIOB->DDR = 0x30; // 配置PD端口的方向寄存器PD3输出
-  GPIOB->CR1 = 0x30; // 设置PD3为推挽输出
- 
-  GsensorInit();
-
-  //TIM2_SetCompare2(2550);
-  
-  // TIM2_SetCompare1( 2550 );
-#if 0
-  //事实证明, pwm与亮度有线性关系
-  while(1)
-  {
-    duty+=10;
-    // 测试红色亮度跟pwm的关系.
-    TIM2_SetCompare3(duty);
-    if(duty > 2550){
-      duty = 0;
-    }
-    
-    Debug((uint8_t)(duty>>8));
-    Debug((uint8_t)duty);
- 
-    DelayMs(200);
-  }
-
-  // printnumber 测试
-  while(1){
-    prinfNumber(1660);
-    prinfNumber(870);
-    prinfNumber(99);
-    prinfNumber(1);
-    DelayMs(1000);
-  }
-#endif  
-  // 更裸
-  while(0)
-  {
-    GetAxisXYZ();
-      //GetDutyDirect();
-      
-    GetDutyOldStyle();
-    
-  }
-  // 抛弃pitch roll,裸着上
-  while(1)
-  {
-    if(catchTime){
-      GetAxisXYZ();
-      GetDutyDirect();
-          
-      catchTime = 0;
-      
-      sleepModeCounter++;
-      if(sleepModeCounter > 100){
-        PowerManage();
-        sleepModeCounter = 0;
-      }
-    }
-    ChangeColorSlowly();
-    DelayMs(1);
-    
-  }
-  while(1)
-  {
-    if(catchTime){
-      GetAxisXYZ();
-    
-      //I2C_SCL_LOW();
-      CountPitch(); 
-      GetDutyBaseRP();
-      //ChangeColor(); 
-      catchTime = 0;
-    }
-    ChangeColorSlowly();
-    DelayMs(1);
-
-    //I2C_SCL_HIGH();
-    
-    //TransColorNew(); 
-    //TransGtoColor();
-  }
   while (1)
   {
-    //DelayMs(2);
-    if (1)
-    {
-      //if(1){
-      
-      GetAxisXYZ();
-      TransColorNew();
-      //TransColor((uint16_t)pose.x);
-      //TransColor((uint16_t)pose.y);
-      //TransColor((uint16_t)pose.z);
-      
-      //LIS3DH_GetAccAxesRaw(&axesBuff);
-      
-      //color.b = axesBuff.AXIS_X * 10;
-      
-      //color.r = TransColor((uint16_t)axesBuff.AXIS_X);
-      //color.g = TransColor((uint16_t)axesBuff.AXIS_Y);
-      //color.b = TransColor((uint16_t)axesBuff.AXIS_Z);
-      catchTime = 0;
-      uartCounter ++;
-      
-      
-      //UART1_SendData8('\r');
-      //UART1_SendData8('\n');
-    }
-    
-    if(uartCounter > 100)
-    {
-      uartCounter = 0;
-      //UART1_SendData8(pose.x);
-      //Delay(20);
-      //UART1_SendData8(pose.y);
-      //Delay(20);
-      //UART1_SendData8(pose.z);
-      //Delay(20);
-    }
-   
-    //LIS3DH_GetAccAxesRaw(&axesBuff);
-    //TransColor();
-    TransGtoColor();
-    
-
-    
-    //GPIOC->ODR &= (uint8_t)(~GPIO_PIN_4);
-    //GPIOC->ODR &= (uint8_t)(~GPIO_PIN_5);
-    //SDA_L;
-
-    //DelayMs(2);
-    //GPIOC->ODR |= (uint8_t)GPIO_PIN_4;
-    //GPIOC->ODR |= (uint8_t)GPIO_PIN_5;
-    //SDA_H;
-    //LIS3DH_GetWHO_AM_I(&mid);
-    //GPIO_WriteReverse(GPIOC, GPIO_PIN_4);
-    //GPIO_WriteReverse(GPIOC, GPIO_PIN_5);
-    //GPIOC->ODR ^= 0x10;
-    //if(counter > 1000){
-    //counter = 0;
-    //GPIOC->ODR ^= 0x10;
-    //}
-    //GPIOC->ODR ^= (uint8_t)GPIO_PIN_4;
-    //GPIO_WriteReverse(GPIOC, GPIO_PIN_4);
-    //GPIO_WriteReverse(GPIOC, GPIO_PIN_5);
-    //}
+    ChangeColorByRainbow();
+    DelayMs(10);
   }
 }
-void main_001(void)
+
+void main_charging_test(void)
 {
 
+  uint8_t ifCharging = 0;
   CLK_HSICmd(ENABLE);
 
   CLK_SYSCLKConfig(CLK_PRESCALER_HSIDIV1);
 
-  TIM1_Config();
+  TIM4_Config();
 
-  GPIO_Init(GPIOC, GPIO_PIN_4, GPIO_MODE_OUT_PP_HIGH_FAST);
-  GPIO_Init(GPIOC, GPIO_PIN_5, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_Init(GPIOD, GPIO_PIN_2, GPIO_MODE_IN_PU_NO_IT);
 
-  GPIOC->DDR = 0x10; // 配置PD端口的方向寄存器PD3输出
-  GPIOC->CR1 = 0x10; // 设置PD3为推挽输出
+  GPIO_Init(GPIOD, GPIO_PIN_3, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_WriteLow(GPIOD, GPIO_PIN_3);
+
+  GPIO_Init(GPIOD, GPIO_PIN_4, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_WriteLow(GPIOD, GPIO_PIN_4);
+
+  GPIO_Init(GPIOA, GPIO_PIN_3, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_WriteLow(GPIOA, GPIO_PIN_3);
 
   while (1)
   {
-
-    //GPIOC->ODR ^= 0x10;
-    //DelayMs(2);
-    //GPIO_WriteReverse(GPIOC, GPIO_PIN_4);
-    //GPIO_WriteReverse(GPIOC, GPIO_PIN_5);
+    ifCharging = GPIO_ReadInputPin(GPIOD, GPIO_PIN_2) && GPIO_PIN_2;
+    if (ifCharging == RESET)
+    {
+      GPIO_WriteHigh(GPIOD, GPIO_PIN_3);
+      DelayMs(1000);
+    }
+    else
+    {
+      GPIO_WriteLow(GPIOD, GPIO_PIN_3);
+    }
+    DelayMs(1000);
   }
+}
+
+void main_sc7a20(void)
+{
+  CLK_HSICmd(ENABLE);
+
+  CLK_SYSCLKConfig(CLK_PRESCALER_HSIDIV1);
+  // B4 SCL
+  GPIO_Init(GPIOB, GPIO_PIN_4, GPIO_MODE_OUT_PP_HIGH_FAST);
+
+  // B5 SDA
+  GPIO_Init(GPIOB, GPIO_PIN_5, GPIO_MODE_OUT_PP_HIGH_FAST);
+
+  G_Sensor_SC7A20_Init();
+
+  UART1_DeInit();
+
+  UART1_Init((uint32_t)115200,
+             UART1_WORDLENGTH_8D,
+             UART1_STOPBITS_1,
+             UART1_PARITY_NO,
+             UART1_SYNCMODE_CLOCK_DISABLE,
+             UART1_MODE_TXRX_ENABLE);
+
+  UART1_Cmd(ENABLE);
+
+  while (1)
+  {
+    ReadXYZdata();
+    //read_acceler_data();
+    Debug('x');
+    PrintInt8('l', AccData8Bit[0]);
+    PrintInt8('h', AccData8Bit[1]);
+#if 0    
+    Debug('y');
+    PrintInt8('l', AccData8Bit[2]);
+    PrintInt8('h', AccData8Bit[3]);
+    Debug('z');
+    PrintInt8('l', AccData8Bit[4]);
+    PrintInt8('h', AccData8Bit[5]);
+#endif
+    //DelayMs(1000);
+  }
+}
+
+void main_rt(void)
+{
+  //uint8_t i;
+  __IO RGBColor_t color = {255, 0, 0};
+
+  GPIO_Init(GPIOC, GPIO_PIN_5, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_5);
+
+  CLK_SYSCLKConfig(CLK_PRESCALER_HSIDIV1);
+  GPIO_Init(GPIOD, GPIO_PIN_3, GPIO_MODE_OUT_OD_LOW_FAST);
+  GPIOD->DDR = 0x08;
+  GPIOD->CR1 = 0x08;
+
+  TIM4_Config();
+  while (1)
+  {
+    rainbowCycle(5);
+  }
+  //while(1){
+  //GPIOC->ODR ^= 0x20;
+  //__disable_interrupt();
+  //asm("BCPL $500A,#5 \n"
+  // "nop         \n"
+  // "nop         \n"
+  // "nop         \n"
+  //"nop         \n"
+  // );
+  //__enable_interrupt();
+  //}
+  while (1)
+  {
+    color.R = 0;
+    color.B = 0;
+    color.G = 0;
+    RGBSetColor(0, color);
+    //RGBSetColor();
+    rgb_SendArray();
+
+    DelayMs(1000);
+
+    LedsArray[0] = 255;
+    LedsArray[1] = 255;
+    LedsArray[2] = 255;
+    //LedsArray[3] = 0;
+    //LedsArray[4] = 0;
+    //LedsArray[5] = 255;
+
+    rgb_SendArray();
+
+    DelayMs(1000);
+  }
+}
+
+static void IWDG_Config(void)
+{
+  
+  /* Enable IWDG (the LSI oscillator will be enabled by hardware) */
+  IWDG_Enable();
+  
+  /* IWDG timeout equal to 250 ms (the timeout may varies due to LSI frequency
+     dispersion) */
+  /* Enable write access to IWDG_PR and IWDG_RLR registers */
+  IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
+  
+  /* IWDG counter clock: LSI/128 */
+  IWDG_SetPrescaler(IWDG_Prescaler_256);
+  
+  /* Set counter reload value to obtain 250ms IWDG Timeout.
+    Counter Reload Value = 250ms/IWDG counter clock period
+                         = 250ms / (LSI/128)
+                         = 0.25s / (LsiFreq/128)
+                         = LsiFreq/(128 * 4)
+                         = LsiFreq/512
+   */
+  IWDG_SetReload(0xff);
+  
+  /* Reload IWDG counter */
+  IWDG_ReloadCounter();
+}
+
+void main1(void)
+{
+  // 启用内置时钟
+  CLK_HSICmd(ENABLE);
+
+  // 设置时钟频率不分频
+  CLK_SYSCLKConfig(CLK_PRESCALER_HSIDIV1);
+  
+  GPIO_Init(GPIOC, GPIO_PIN_7, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_7);
+  
+  GPIO_Init(GPIOC, GPIO_PIN_6, GPIO_MODE_OUT_PP_HIGH_FAST); 
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_6);
+  
+  // 充电检测
+  GPIO_Init(GPIOD, GPIO_PIN_2, GPIO_MODE_IN_PU_NO_IT);  
+  
+
+  // 设置定时器tim4, 用于做delay定时
+  TIM4_Config();
+
+  TIM2Config();
+  
+  SetBlueDuty(0); 
+  SetGreenDuty(2550); 
+  SetRedDuty(0); 
+  //SetBlueDuty(MAX_DUTY);
+  //SetGreenDuty(MAX_DUTY);
+  //SetRedDuty(MAX_DUTY);  
+   
+  IWDG_Config();
+  
+  while(1){
+    IWDG_ReloadCounter();
+    DelayMs(3000);
+    GPIO_WriteLow(GPIOC, GPIO_PIN_7);    
+    
+  }
+  
+  while(1){
+    //runningState = RUNNING_NORMAL;
+    IWDG_ReloadCounter(); 
+    SetGreenDuty(MAX_DUTY); 
+    SetBlueDuty(0); 
+    DelayMs(500);
+    SetGreenDuty(0);
+    SetBlueDuty(MAX_DUTY);
+    DelayMs(500);
+    
+  }  
+}
+
+// 主程序
+void main(void)
+{
+
+  uint16_t sleepModeCounter = 0;
+  //uint8_t ifUSBPlugIn = 0;
+  //uint8_t ifUSBPlugOutCounter = 0;
+
+  //uint8_t oldRunningState = RUNNING_NORMAL;
+  
+  runningState = RUNNING_NORMAL;
+  //runningState = RUNNING_TESTING;
+
+  // 启用内置时钟
+  CLK_HSICmd(ENABLE);
+
+  // 设置时钟频率不分频
+  CLK_SYSCLKConfig(CLK_PRESCALER_HSIDIV1);
+
+  // 开启led与adc的开关
+  GPIO_Init(GPIOC, GPIO_PIN_7, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_7);
+  
+  // C5 ADC_EN
+  GPIO_Init(GPIOC, GPIO_PIN_5, GPIO_MODE_OUT_PP_HIGH_FAST);
+  
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_5);
+   
+  ADC_Init();
+
+  // 设置定时器tim4, 用于做delay定时
+  TIM4_Config();
+
+#if RGB_PWM
+  // pwm定时器设置
+  TIM2Config();
+#endif
+
+#if WS2812
+  // 驱动WS2812只需要一条线
+
+  GPIO_Init(GPIOD, GPIO_PIN_3, GPIO_MODE_OUT_OD_LOW_FAST);
+  GPIOD->DDR = 0x08;
+  GPIOD->CR1 = 0x08;
+
+  InitColor();
+  
+#endif
+
+  // 串口初始化
+  UartInit();
+
+  IIC_Init();
+
+  // 充电检测引脚初始化
+  // CHRG
+  GPIO_Init(GPIOD, GPIO_PIN_2, GPIO_MODE_IN_PU_NO_IT);
+
+  // CHR_OUT
+  // 改成插入usb检测.
+  GPIO_Init(GPIOC, GPIO_PIN_4, GPIO_MODE_IN_FL_NO_IT);
+
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_4);
+  
+
+#if MEMS_SC7A20C
+  // 初始化SC7A20
+  G_Sensor_SC7A20_Init();
+#endif
+
+#if MEMS_LIS3DH
+  GsensorInit();
+
+#endif
+  
+  // 初始化看门狗
+  IWDG_Config();
+  
+  while (1)
+  {
+    
+    //喂狗
+    IWDG_ReloadCounter(); 
+    switch (runningState)
+    {
+    case RUNNING_CHARGING_FINISHED:
+      GreenBlink();
+      PowerOff();
+      break;
+#if 0      
+    case RUNNING_CHARGING_FINISHED:
+      
+      PowerOff(); 
+      //GPIO_WriteHigh(GPIOC, GPIO_PIN_5);
+      
+      ifUSBPlugIn = GPIO_ReadInputPin(GPIOC, GPIO_PIN_4) && GPIO_PIN_4;
+      // 如果管子被拔
+      if( ifUSBPlugIn == RESET){
+        ifUSBPlugOutCounter ++;
+        if(ifUSBPlugOutCounter > 100){
+          //GPIO_WriteHigh(GPIOC, GPIO_PIN_5);
+          //WS2812GreenBlink(); 
+          PowerOff(); 
+        }
+        //WS2812BlueBlink(); 
+      }else{
+        
+        ifUSBPlugOutCounter = 0;
+      }
+      
+      DelayMs(10);
+      
+      break;
+#endif      
+    case RUNNING_CHARNING:
+      
+#if WS2812
+      rainbowCycle(5);
+      
+#endif      
+      // 充电中
+#if RGB_PWM
+      // 彩虹色
+      ChangeColorByRainbow();
+
+      DelayMs(10);
+#endif
+      break;
+    case RUNNING_NORMAL:
+
+#if 0
+      // 普通模式
+      if (oldRunningState == RUNNING_CHARNING)
+      {
+#if RGB_PWM        
+        // 充好电之后, 直接关机
+        //AllOff();
+        GreenBlink();
+#endif
+
+      }
+  
+#endif
+      // 4.1v 636
+      // 3.7v 574
+#if MEMS_LIS3DH
+      // 读取三轴
+      GetAxisXYZ();
+#endif
+
+      //GetDutyDirect();
+#if MEMS_SC7A20C
+
+      ReadXYZdata();
+
+#endif
+
+// 使用rgb驱动
+#if RGB_PWM
+      // 将三轴信息转成pwm值
+      GetDutyOldStyle();
+#endif
+
+#if WS2812
+      GsensorToWS2812();
+#endif
+
+      sleepModeCounter++;
+      
+      // 定时检查电压跟休眠
+      if (sleepModeCounter > SLEEP_MODE_WAIT_COUNTERS)
+      {
+        // 如果长时间不动就自动关机
+        PowerManage();
+
+        // 如果电压不够, 就关机
+        CheckBatVol();
+        //AllOff();
+        sleepModeCounter = 0;
+      }
+      // if (catchTime)
+      //
+      // GetAxisXYZ();
+      //CountPitch();
+
+      //GetDutyByRP();
+      //catchTime = 0;
+      //}
+
+      //ChangeColorSlowly();
+      break;
+    }
+    //oldRunningState = runningState;
+  }
+
+#if 0
+  // 更裸
+  while (1)
+  {
+    GetAxisXYZ();
+    //GetDutyDirect();
+
+    GetDutyOldStyle();
+
+    sleepModeCounter++;
+
+    if (sleepModeCounter > SLEEP_MODE_WAIT_COUNTERS)
+    {
+      //PowerManage();
+      //AllOff();
+      sleepModeCounter = 0;
+    }
+  }
+#endif
 }
 
 void assert_failed(uint8_t *file, uint32_t line)

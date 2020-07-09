@@ -1,30 +1,34 @@
-"D:\STM8Project\WS2812\lis3dh\lis3dh_driver.c"
+"D:\STM8Project\WS2812_SC7A0\lis3dh\lis3dh_driver.c"
 -std=c99
 -ferror-limit=0
 -I
-D:\STM8Project\WS2812\inc
+D:\STM8Project\WS2812_SC7A0\inc
 -I
 D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\stm8\inc\c
 -I
-D:\STM8Project\WS2812
+D:\STM8Project\WS2812_SC7A0
 -I
-D:\STM8Project\WS2812\ws2812b
+D:\STM8Project\WS2812_SC7A0\ws2812b
 -I
-D:\STM8Project\WS2812\lis3dh
+D:\STM8Project\WS2812_SC7A0\lis3dh
+-I
+D:\STM8Project\WS2812_SC7A0\lis3dh
 -I
 D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\stm8\inc
 -I
 D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\stm8\inc\c
 -I
-D:\STM8Project\WS2812\inc
+D:\STM8Project\WS2812_SC7A0\inc
 -I
 D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\stm8\inc\c
 -I
-D:\STM8Project\WS2812
+D:\STM8Project\WS2812_SC7A0
 -I
-D:\STM8Project\WS2812\ws2812b
+D:\STM8Project\WS2812_SC7A0\ws2812b
 -I
-D:\STM8Project\WS2812\lis3dh
+D:\STM8Project\WS2812_SC7A0\lis3dh
+-I
+D:\STM8Project\WS2812_SC7A0\lis3dh
 -D__CHAR_BITS__=8
 -D__CHAR_MAX__=0xff
 -D__CHAR_MIN__=0

@@ -23,9 +23,9 @@ param([String]$debugfile = "");
 
 if ($debugfile -eq "")
 {
-& "D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\common\bin\cspybat" -f "D:\STM8Project\WS2812\settings\WS2812_S103.Debug.general.xcl" --backend -f "D:\STM8Project\WS2812\settings\WS2812_S103.Debug.driver.xcl" 
+& "D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\common\bin\cspybat" -f "D:\STM8Project\WS2812_SC7A0\settings\WS2812_S103.Debug.general.xcl" --backend -f "D:\STM8Project\WS2812_SC7A0\settings\WS2812_S103.Debug.driver.xcl" 
 }
 else
 {
-& "D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\common\bin\cspybat" -f "D:\STM8Project\WS2812\settings\WS2812_S103.Debug.general.xcl" --debug_file=$debugfile --backend -f "D:\STM8Project\WS2812\settings\WS2812_S103.Debug.driver.xcl" 
+& "D:\Program Files (x86)\IAR Systems\Embedded Workbench 8.0\common\bin\cspybat" -f "D:\STM8Project\WS2812_SC7A0\settings\WS2812_S103.Debug.general.xcl" --debug_file=$debugfile --backend -f "D:\STM8Project\WS2812_SC7A0\settings\WS2812_S103.Debug.driver.xcl" 
 }

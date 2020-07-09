@@ -27,14 +27,15 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm8s_it.h"
-#include "sys.h"
+#include "user_comm.h"
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 extern void TimingDelay_Decrement(void);
-
+extern uint16_t Conversion_Value;
+extern uint8_t runningState;
 /* Private functions ---------------------------------------------------------*/
 
 /* Public functions ----------------------------------------------------------*/
@@ -453,11 +454,11 @@ INTERRUPT_HANDLER(I2C_IRQHandler, 19)
   */
  INTERRUPT_HANDLER(ADC1_IRQHandler, 22)
 {
-
-    /* In order to detect unexpected events during development,
-       it is recommended to set a breakpoint on the following instruction.
-    */
-    return;
+  //Conversion_Value = ADC1_GetConversionValue();
+  /* In order to detect unexpected events during development,
+     it is recommended to set a breakpoint on the following instruction.
+  */
+  return;
 
 }
 #endif /*STM8S208 or STM8S207 or STM8AF52Ax or STM8AF62Ax */
@@ -485,13 +486,42 @@ INTERRUPT_HANDLER(TIM4_UPD_OVF_IRQHandler, 23)
 {
   //TimingDelay_Decrement();
   static uint16_t counter = 0;
+  static uint16_t chargingCheckCounter = 0;
+  uint8_t ifCharging = 0;
   counter++;
-  
-  if(counter > 10){
-    counter = 0;
-    catchTime = 1 ;
-  }
+  chargingCheckCounter++;
+   
+  if(chargingCheckCounter > 1000){
+    ifCharging = GPIO_ReadInputPin(GPIOD, GPIO_PIN_2) && GPIO_PIN_2;
     
+    if(ifCharging == RESET){
+        
+      runningState = RUNNING_CHARNING;
+    
+    // 如果没有在充电
+    }else{
+      // 如果充电完成
+      if(runningState == RUNNING_CHARNING){
+        
+#if WS2812 
+        // 别他妈在it里面delay, 不然死循环了, 白痴
+        //WS2812GreenBlink();        
+#endif  
+        runningState = RUNNING_CHARGING_FINISHED;
+        //Sleep();
+        //PowerOff();             
+      }
+      //else 
+        //if(runningState == RUNNING_CHARGING_FINISHED){
+        // Wakeup();
+      //}else{
+        //runningState == RUNNING_NORMAL
+      //}
+    }
+    
+    chargingCheckCounter = 0;
+  }
+  
   UptimeRoutine();
   //GPIOC->ODR ^= 0x10;
   /* Cleat Interrupt Pending bit */

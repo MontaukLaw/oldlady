@@ -5,6 +5,7 @@ static uint32_t delay_time = 0;
 
 extern AxesRaw_t axesBuff;
 extern Color_t color;
+extern uint8_t runningState;
 
 void Delay(uint16_t counter)
 {
@@ -21,6 +22,7 @@ void DelayMs(uint16_t ms)
   delay_time = uptime + ms;
   while (delay_time > uptime)
   {
+    IWDG_ReloadCounter(); 
   }
 }
 
@@ -96,3 +98,74 @@ void prinfNumber(uint16_t num)
   }
 }
 
+void PowerOff(void)
+{
+  
+#if MEMS_LIS3DH
+  LIS3DH_SetMode(LIS3DH_POWER_DOWN);
+#endif
+  
+#if MEMS_SC7A20C
+  // ÈÃmems¹Ø»ú
+  Sensor_Write_Byte(0x20, 0x00);
+#endif
+
+  GPIO_WriteLow(GPIOC, GPIO_PIN_7);
+  
+  //halt();
+  while(1){}
+  
+}
+
+void Sleep(void)
+{
+  GPIO_WriteLow(GPIOC, GPIO_PIN_5);  
+  
+  runningState = RUNNING_CHARGING_FINISHED;
+
+}
+void Wakeup(void)
+{
+  GPIO_WriteLow(GPIOC, GPIO_PIN_5);
+  
+  runningState = RUNNING_NORMAL;
+}
+
+void PrintU8(uint8_t prefix, uint8_t data)
+{
+  Debug(prefix);
+  Debug(':');
+  if(data>0){
+   
+    prinfNumber((uint16_t)data);
+  }else{
+    Debug('-');
+    prinfNumber((uint16_t)(abs(data)));
+  }
+
+}
+
+void PrintInt8(uint8_t prefix, int8_t data)
+{
+  Debug(prefix);
+  Debug(':');
+  if(data>0){
+   
+    prinfNumber((uint16_t)data);
+  }else{
+    Debug('-');
+    prinfNumber((uint16_t)(abs(data)));
+  }
+}
+void PrintShort(uint8_t prefix, short data)
+{
+  Debug(prefix);
+  Debug(':');
+  if(data>0){
+   
+    prinfNumber((uint16_t)data);
+  }else{
+    Debug('-');
+    prinfNumber((uint16_t)(abs(data)));
+  }
+}

@@ -2121,19 +2121,37 @@
     <group>
         <name>Driver</name>
         <file>
+            <name>$PROJ_DIR$\src\bsp_adc.c</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\lis3dh\bsp_i2c.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\bsp_uart.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\lis3dh\lis3dh_driver.c</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\src\SC7A20.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\stm8s_adc1.c</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\src\stm8s_clk.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\stm8s_flash.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_gpio.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_i2c.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\stm8s_iwdg.c</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_tim1.c</name>
@@ -2146,6 +2164,9 @@
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm8s_uart1.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\ws2812.c</name>
         </file>
     </group>
     <file>

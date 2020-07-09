@@ -3,11 +3,12 @@
 
 #include "user_comm.h"
 
-//#define  Sensor_Wr_Addr1    0x32  //DOUT_A1 level GND
-//#define  Sensor_Rd_Addr1    0x33
+#define  Sensor_Wr_Addr1    0x32  //DOUT_A1 level GND
+#define  Sensor_Rd_Addr1    0x33
 
-#define  Sensor_Wr_Addr1    0x30  //DOUT_A1 level GND
-#define  Sensor_Rd_Addr1    0x31
+// lis3dh
+//#define  Sensor_Wr_Addr1    0x30  //DOUT_A1 level GND
+//#define  Sensor_Rd_Addr1    0x31
 
 #define SDA_PORT   GPIOB     //GPIOC
 #define SDA_PIN    GPIO_PIN_5 
@@ -51,6 +52,7 @@ void Sensor_Write_NByte(uint8_t RAddr, uint8_t *WData, uint8_t WLen);
 
 void Sensor_Write_Byte(uint8_t RAddr, uint8_t *WData) ;
 
+void IIC_Init(void);
 
 #endif
 

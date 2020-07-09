@@ -1,4 +1,4 @@
-#include "bsp_i2c.h"
+#include "user_comm.h"
 
 uint8_t __NOP(void)
 {
@@ -6,6 +6,23 @@ uint8_t __NOP(void)
   //i++;
   return i;
   
+}
+
+void IIC_Init(void)
+{
+  // C7 CS
+  GPIO_Init(GPIOC, GPIO_PIN_7, GPIO_MODE_OUT_PP_HIGH_FAST);
+  GPIO_WriteHigh(GPIOC, GPIO_PIN_7);
+
+  // B4 SCL
+  GPIO_Init(GPIOB, GPIO_PIN_4, GPIO_MODE_OUT_PP_HIGH_FAST);
+
+  // B5 SDA
+  GPIO_Init(GPIOB, GPIO_PIN_5, GPIO_MODE_OUT_PP_HIGH_FAST);
+
+  GPIOB->DDR = 0x30; // 配置PD端口的方向寄存器PD3输出
+  GPIOB->CR1 = 0x30; // 设置PD3为推挽输出
+
 }
 
 // 修改sda方向
