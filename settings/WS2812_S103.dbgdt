@@ -958,7 +958,7 @@
                     <item>greenDutyTarget</item>
                     <item>SL_ACCEL_X</item>
                     <item>SL_ACCEL_X</item>
-                    <item></item>
+                    <item />
                 </expressions>
                 <col-names>
                     <item>Expression</item>
